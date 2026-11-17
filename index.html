@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Jogo da Vida da Tropa — protótipo v0.4</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bowlby+One&family=Rubik:wght@400;500;700&display=swap">
+<style>
+:root{--bg:#cfe3dc;--surf:#f7fbf9;--ink:#1e2f2b;--mut:#4f6b64;--acc:#e4572e;--gold:#f0a500;--line:#1e2f2b;--ok:#2a9d8f;--pink:#f3b6c8;--blue:#b9d3f2;--grn:#bfe5c6;--grass:#a8d8a8;--road:#5b4636;--dash:#f3e6c4;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14302d;--surf:#1d423e;--ink:#f1ead7;--mut:#a9c2ba;--line:#f1ead7;--pink:#6b3a4d;--blue:#2b4a70;--grn:#2c5a43;--grass:#1f4a38;--road:#0f1f1c;--dash:#8a7d5c;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#14302d;--surf:#1d423e;--ink:#f1ead7;--mut:#a9c2ba;--line:#f1ead7;--pink:#6b3a4d;--blue:#2b4a70;--grn:#2c5a43;--grass:#1f4a38;--road:#0f1f1c;--dash:#8a7d5c;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Rubik,system-ui,sans-serif;font-size:16px;line-height:1.4}
+main{max-width:480px;margin:0 auto;padding:14px 12px 28px}
+h1,h2{font-family:"Bowlby One",Impact,sans-serif;font-weight:400;margin:0}
+h1{font-size:28px;line-height:1.05}h2{font-size:19px}
+.band{height:12px;border:3px solid var(--line);border-radius:8px;margin:10px 0 12px;background:linear-gradient(90deg,var(--acc) 0 33%,var(--gold) 33% 66%,var(--ok) 66% 100%)}
+.sub,.mut{color:var(--mut)}.sub{margin:0 0 14px}.mut{font-size:14px;margin:0 0 8px}
+button{font:inherit;color:inherit;cursor:pointer}
+.btn{display:block;width:100%;padding:12px 14px;border:3px solid var(--line);border-radius:14px;background:var(--gold);color:#1e2f2b;font-weight:700;font-size:16px;box-shadow:4px 4px 0 var(--line);margin-top:8px;text-align:left}
+.btn:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--line)}
+.btn.alt{background:var(--surf);color:var(--ink)}
+.btn small{display:block;font-weight:400;font-size:13px}
+.pick{display:flex;gap:10px;margin:12px 0 14px}
+.pick button{flex:1;padding:12px 0;border:3px solid var(--line);border-radius:14px;background:var(--surf);font-weight:700;font-size:20px}
+.pick button[aria-pressed="true"]{background:var(--acc);color:#fff}
+.how{margin:0 0 14px;padding-left:18px;font-size:14px;color:var(--mut)}
+.score{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+.chip{padding:6px 8px;border:3px solid var(--line);border-radius:12px;background:var(--surf);display:flex;gap:6px;align-items:center;font-weight:700;font-size:13px;line-height:1.25}
+.chip.on{background:var(--gold);color:#1e2f2b}
+.chip small{display:block;font-weight:400;font-size:12px}
+.map{height:310px;overflow:auto;border:3px solid var(--line);border-radius:16px;background:var(--grass);margin-bottom:6px;-webkit-overflow-scrolling:touch}
+.map svg{display:block;width:100%;height:auto}
+.rb{stroke:#fff3d0;stroke-width:46;stroke-linecap:round;fill:none}
+.rr{stroke:#c96a14;stroke-width:40;stroke-linecap:round;fill:none}
+.tl{stroke:#7a3b12;stroke-width:2}
+.tl.a{fill:#f6a13a}.tl.p{fill:#3fae5a}.tl.h{fill:#3b7fd6}.tl.m{fill:#f07fae}.tl.b{fill:#7ec3f0}.tl.u,.tl.g,.tl.s{fill:#f2d03b}.tl.v{fill:#2fb7b0}.tl.n{fill:#8bd36b}.tl.f{fill:#d8433a}.tl.S{fill:#fff}.tl.r{fill:#e4572e}
+.ic{font:700 14px Rubik,sans-serif;fill:#1b1b1b;text-anchor:middle;dominant-baseline:central;pointer-events:none}.ic.w{fill:#fff}
+.lbl{font:700 12px Rubik,sans-serif;fill:#fff;text-anchor:middle;paint-order:stroke;stroke:#1e2f2b;stroke-width:4;stroke-linejoin:round}
+.ring{fill:none;stroke:#e4572e;stroke-width:4}
+.legend{font-size:12px;color:var(--mut);margin:0 0 12px}
+.panel{border:3px solid var(--line);border-radius:16px;background:var(--surf);padding:14px;box-shadow:5px 5px 0 var(--line)}
+.dice{width:58px;height:58px;border-radius:50%;border:3px solid var(--line);background:var(--gold);color:#1e2f2b;font-family:"Bowlby One",Impact,sans-serif;font-size:27px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;animation:sh .4s}
+@keyframes sh{0%,100%{transform:rotate(0)}25%{transform:rotate(-14deg)}75%{transform:rotate(14deg)}}
+@media (prefers-reduced-motion:reduce){.dice{animation:none}}
+.ev{margin:6px 0 4px;font-size:16px}
+.rank{list-style:none;padding:0;margin:12px 0}
+.rank li{display:flex;align-items:center;gap:10px;padding:10px 12px;border:3px solid var(--line);border-radius:12px;background:var(--surf);margin-bottom:8px;font-weight:700}
+.rank li b{margin-left:auto;text-align:right}.rank small{display:block;font-weight:400;color:var(--mut)}
+.hidden{display:none}
+button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+</style>
+</head>
+<body>
+<main>
+<section id="start">
+  <h1>Jogo da Vida da Tropa</h1>
+  <div class="band"></div>
+  <p class="sub">Protótipo v0.3. Todo mundo joga neste mesmo celular, revezando. Carrinhos genéricos por enquanto.</p>
+  <ul class="how">
+    <li>Gire a roleta (1 a 10) e ande pelo mapa. Nas bifurcações (Y) você escolhe o caminho.</li>
+    <li>Você junta três coisas: <b>dinheiro</b>, <b>conhecimento</b> (✎) e <b>felicidade</b> (☀).</li>
+    <li>Conhecimento aumenta seu salário. Felicidade vem de família, viagens e boas escolhas.</li>
+    <li>Quem se aposenta (★) soma pontos: patrimônio ÷ 10 + conhecimento + felicidade.</li>
+  </ul>
+  <h2>Quantos jogadores?</h2>
+  <div class="pick" id="pick"><button data-n="2" aria-pressed="true">2</button><button data-n="3" aria-pressed="false">3</button><button data-n="4" aria-pressed="false">4</button></div>
+  <button class="btn" id="go">Começar</button>
+</section>
+<section id="game" class="hidden">
+  <div class="score" id="score"></div>
+  <div class="map" id="map"></div>
+  <p class="legend">F faculdade · ◆ formatura · ✎ curso · ? imprevisto · $ pagamento · ⌂ casa · ♥ casamento · ☺ filhos · ✈ viagem · ◎ negócio · Y bifurcação · ★ aposentadoria</p>
+  <div class="panel" id="panel"></div>
+</section>
+<section id="end" class="hidden">
+  <h1>Todo mundo se aposentou</h1>
+  <div class="band"></div>
+  <p class="sub">Pontos = patrimônio ÷ 10 + conhecimento + felicidade.</p>
+  <ol class="rank" id="rank"></ol>
+  <button class="btn" id="again">Jogar de novo</button>
+</section>
+</main>
+<script>
+(function(){
+var $=function(i){return document.getElementById(i)};
+var COL=["#e4572e","#f0a500","#7a4fd1","#2e86de"],H=2740,STOP="gmbfr";
+var ICON={S:"▶",u:"F",g:"◆",a:"?",p:"$",h:"⌂",m:"♥",b:"☺",s:"✎",v:"✈",n:"◎",f:"Y",r:"★"};
+// ---- Mapa: nós fixos + faixas que se bifurcam e se encontram de novo ----
+var N={};
+function node(id,t,x,y){N[id]={id:id,t:t,x:x,y:y,n:[]}}
+function link(a,b){N[a].n.push(b)}
+var LANES=[];
+function lane(pre,ts,from,to,amp,w){var a=N[from],b=N[to],L=ts.split(" "),ids=[];
+ L.forEach(function(t,i){var f=(i+1)/(L.length+1),id=pre+i;node(id,t,a.x+(b.x-a.x)*f+Math.sin(f*Math.PI)*amp+Math.sin(f*Math.PI*2)*w,a.y+(b.y-a.y)*f);ids.push(id)});
+ link(from,ids[0]);for(var i=0;i<ids.length-1;i++)link(ids[i],ids[i+1]);link(ids[ids.length-1],to);LANES.push([from].concat(ids,[to]))}
+node("S","S",210,40);node("M1","a",210,440);node("F2","f",210,1010);node("M2","a",210,1420);
+node("F3","f",210,1930);node("M3","a",210,2330);node("END","r",210,2690);
+lane("U","u u s u u g","S","M1",-95,0);          // faculdade
+lane("C","a p a a p a","S","M1",95,0);            // carreira direta
+lane("B","p a s a m a p a h a","M1","F2",0,38);   // vida adulta (casamento)
+lane("L","h a b a p a","F2","M2",-95,0);          // família
+lane("R","v a p a a p","F2","M2",95,0);           // aventura
+lane("D","p a h a p a s a","M2","F3",0,-38);
+lane("N","s a s p a h","F3","M3",-95,0);          // pós-graduação
+lane("X","n a p a n p","F3","M3",95,0);           // negócio próprio
+lane("E","p a h a p a a p","M3","END",0,38);
+var PV={};for(var q in N)N[q].n.forEach(function(b){PV[b]=q});
+var FK={S:[["Faculdade","Dívida de R$ 40 mil, começa mais devagar, mas escolhe entre 2 carreiras de salário alto."],["Carreira direta","Começa a ganhar já, com um emprego sorteado."]],
+ F2:[["Caminho da família","Casas e filhos: mais felicidade."],["Caminho da aventura","Viagens e pagamentos: mais leve, sem filhos."]],
+ F3:[["Pós-graduação","Cursos que rendem muito conhecimento."],["Negócio próprio","Risco alto: pode render muito ou doer no bolso."]]};
+var JOB=[{n:"Taxista",s:25},{n:"Músico de bar",s:20},{n:"Comerciante de feira",s:30},{n:"Mecânico",s:35},{n:"Cozinheiro",s:28},{n:"Eletricista",s:33}];
+var UNI=[{n:"Engenheiro",s:60},{n:"Médica",s:90},{n:"Advogado",s:70},{n:"Arquiteta",s:65},{n:"Professor",s:45}];
+var HOUSES=[{n:"Casinha de vila",c:30,v:45},{n:"Apartamento no centro",c:50,v:75},{n:"Casa na praia",c:90,v:140}];
+// Imprevistos: m = dinheiro (R$ mil), k = conhecimento, h = felicidade. Aqui mora o humor.
+var EVT=[
+{t:"Seu primo pediu dinheiro emprestado e sumiu.",m:-10},
+{t:"Você ganhou a rifa do bairro.",m:20},
+{t:"O pneu furou na chuva, bem na hora do rolê.",m:-6},
+{t:"Fez um churrasco memorável pra tropa.",m:-4,h:3},
+{t:"Leu um livro inteiro de uma vez só. Milagre.",k:2},
+{t:"Sua piada viralizou no grupo e rendeu um bico.",m:9,h:1},
+{t:"A geladeira pifou na semana da festa.",m:-10},
+{t:"Foi chamado pra dar palestra sobre “como ser sagaz”.",m:11,k:1},
+{t:"Cochilou na reunião mais importante do ano.",m:-5,h:-1},
+{t:"Uma tia deixou uma herança pequena, mas simbólica.",m:15},
+{t:"Pagou a conta do grupo no “depois a gente acerta”.",m:-7,h:1},
+{t:"Aprendeu a consertar a própria pia num vídeo.",m:3,k:1}];
+var P=[],turn=0,N_=2,done=0;
+function pick(a){return a[Math.floor(Math.random()*a.length)]}
+function spin(){return 1+Math.floor(Math.random()*10)}
+function rm(n){return(n<0?"−R$ ":"R$ ")+Math.abs(n)+" mil"}
+function sg(n){return(n>0?"+":"−")+"R$ "+Math.abs(n)+" mil"}
+function sal(p){return(p.car?p.car.s:0)+Math.floor(p.k/2)*2+(p.sp?5:0)}
+function net(p){return p.m+p.ho.reduce(function(a,x){return a+x.v},0)}
+function pts(p){return Math.floor(net(p)/10)+p.k+p.hp}
+function fx(p,m,k,h){var o=[];p.m+=m||0;p.k+=k||0;p.hp+=h||0;
+ if(m)o.push(sg(m));if(k)o.push((k>0?"+":"−")+Math.abs(k)+" conhecimento");if(h)o.push((h>0?"+":"−")+Math.abs(h)+" felicidade");
+ return o.length?"<b>"+o.join(", ")+".</b>":""}
+function car(c,sz){return '<svg width="'+sz+'" height="'+sz*0.62+'" viewBox="0 0 32 20" aria-hidden="true"><path d="M2 14l3-6c1-2 3-3 5-3h9c2 0 4 1 5 3l3 4c3 0 4 1 4 3v2H2z" fill="'+c+'" stroke="#1e2f2b" stroke-width="1.6" stroke-linejoin="round"/><circle cx="9" cy="17" r="3" fill="#1e2f2b"/><circle cx="24" cy="17" r="3" fill="#1e2f2b"/></svg>'}
+function cur(){return P[turn]}
+function ui(h,fn){$("panel").innerHTML=h;for(var k in fn)$(k).onclick=fn[k]}
+var SCN=null;
+function mkScenery(){var sd=11,rnd=function(){sd=(sd*9301+49297)%233280;return sd/233280},pts=[],id,o="",i;
+ for(id in N)N[id].n.forEach(function(b){for(var k=0;k<=4;k++)pts.push([N[id].x+(N[b].x-N[id].x)*k/4,N[id].y+(N[b].y-N[id].y)*k/4])});
+ var fx_=[[48,760,40],[372,1230,40],[46,1990,40],[372,2480,40]];
+ function free(x,y,m){return pts.every(function(q){return Math.hypot(q[0]-x,q[1]-y)>m})&&fx_.every(function(q){return Math.hypot(q[0]-x,q[1]-y)>q[2]+10})}
+ fx_.forEach(function(q){o+='<ellipse cx="'+q[0]+'" cy="'+q[1]+'" rx="'+q[2]+'" ry="'+q[2]*0.6+'" fill="#4aa8e0" stroke="#2f7fb8" stroke-width="3"/>'});
+ [[40,430],[385,1500],[45,2210]].forEach(function(q){o+='<path d="M'+(q[0]-48)+' '+(q[1]+30)+'L'+q[0]+' '+(q[1]-34)+'L'+(q[0]+48)+' '+(q[1]+30)+'Z" fill="#2e7d3a" stroke="#1d5a28" stroke-width="3"/>'});
+ for(i=0;i<170;i++){var x=rnd()*420,y=rnd()*H,r=7+rnd()*6;if(y>30&&free(x,y,48))o+='<circle cx="'+x.toFixed(0)+'" cy="'+y.toFixed(0)+'" r="'+r.toFixed(0)+'" fill="#2f8a3c"/><circle cx="'+(x-2).toFixed(0)+'" cy="'+(y-2).toFixed(0)+'" r="'+(r*0.55).toFixed(0)+'" fill="#58b04c"/>'}
+ return o}
+function wheel(cx,cy,R){var o="",c=["#e4572e","#f0a500","#2a9d8f","#7a4fd1","#2e86de","#e84a8a","#8bd36b","#f2d03b","#3fae5a","#f6a13a"],k;
+ for(k=0;k<10;k++){var a=k/10*6.2832,b=(k+1)/10*6.2832;o+='<path d="M'+cx+' '+cy+'L'+(cx+R*Math.cos(a)).toFixed(1)+' '+(cy+R*Math.sin(a)).toFixed(1)+'A'+R+' '+R+' 0 0 1 '+(cx+R*Math.cos(b)).toFixed(1)+' '+(cy+R*Math.sin(b)).toFixed(1)+'Z" fill="'+c[k]+'" stroke="#fff" stroke-width="1.5"/>'}
+ return o+'<circle cx="'+cx+'" cy="'+cy+'" r="'+R*0.34+'" fill="#fff" stroke="#1e2f2b" stroke-width="2.5"/><text class="ic" style="font-size:9px" x="'+cx+'" y="'+cy+'">1–10</text>'}
+function drawMap(){var D=[],nd="",lb="",cs="",hs="",id;
+ if(!SCN)SCN=mkScenery();
+ LANES.forEach(function(L){var p=L.map(function(i){return N[i]}),d="M"+p[0].x.toFixed(0)+" "+p[0].y.toFixed(0);
+  for(var k=1;k<p.length-1;k++)d+="Q"+p[k].x.toFixed(0)+" "+p[k].y.toFixed(0)+" "+((p[k].x+p[k+1].x)/2).toFixed(0)+" "+((p[k].y+p[k+1].y)/2).toFixed(0);
+  D.push(d+"L"+p[p.length-1].x.toFixed(0)+" "+p[p.length-1].y.toFixed(0))});
+ var road=D.map(function(d){return '<path class="rb" d="'+d+'"/>'}).join("")+D.map(function(d){return '<path class="rr" d="'+d+'"/>'}).join("");
+ for(id in N){var o=N[id],a0=PV[id]?N[PV[id]]:o,a1=o.n.length?N[o.n[0]]:o,ang=Math.atan2(a1.y-a0.y,a1.x-a0.x)*57.3,X=o.x.toFixed(0),Y=o.y.toFixed(0);
+  nd+='<g transform="translate('+X+' '+Y+') rotate('+ang.toFixed(0)+')"><rect class="tl '+o.t+'" x="-21" y="-15" width="42" height="30" rx="6"/></g><text class="ic'+(" fpbhr".indexOf(o.t)>0?" w":"")+'" x="'+X+'" y="'+Y+'">'+ICON[o.t]+'</text>';
+  if(o.t==="h"){var hx=o.x+Math.cos((ang+90)*0.01745)*44,hy=o.y+Math.sin((ang+90)*0.01745)*44;hs+='<g transform="translate('+hx.toFixed(0)+' '+hy.toFixed(0)+')"><rect x="-10" y="-6" width="20" height="14" fill="#fff" stroke="#1e2f2b" stroke-width="1.6"/><path d="M-12 -6L0 -17L12 -6Z" fill="#d8433a" stroke="#1e2f2b" stroke-width="1.6"/></g>'}}
+ for(id in FK)FK[id].forEach(function(f,i){var a=N[N[id].n[i]];lb+='<text class="lbl" x="'+a.x.toFixed(0)+'" y="'+(a.y-30).toFixed(0)+'">'+f[0]+'</text>'});
+ P.forEach(function(p,i){var o=N[p.pos],x=o.x-16+[-12,12,-12,12][i],y=o.y-40-(i>1?18:0);
+  if(i===turn)cs+='<circle class="ring" cx="'+o.x.toFixed(0)+'" cy="'+o.y.toFixed(0)+'" r="27"/>';
+  cs+='<g transform="translate('+x.toFixed(0)+' '+y.toFixed(0)+')"><path d="M2 14l3-6c1-2 3-3 5-3h9c2 0 4 1 5 3l3 4c3 0 4 1 4 3v2H2z" fill="'+p.color+'" stroke="#1e2f2b" stroke-width="1.8" stroke-linejoin="round"/><circle cx="9" cy="17" r="3" fill="#1e2f2b"/><circle cx="24" cy="17" r="3" fill="#1e2f2b"/></g>'});
+ $("map").innerHTML='<svg id="svg" viewBox="0 0 420 '+H+'" role="img" aria-label="Mapa do jogo"><defs><linearGradient id="gg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8fd05a"/><stop offset=".5" stop-color="#5fb347"/><stop offset="1" stop-color="#8fd05a"/></linearGradient></defs><rect width="420" height="'+H+'" fill="url(#gg)"/>'+SCN+wheel(80,105,40)+road+hs+nd+lb+cs+'</svg>'}
+function camera(){var c=$("map"),s=$("svg");if(!s||!P.length)return;var y=N[cur().pos].y/H*s.clientHeight-c.clientHeight/2;
+ try{c.scrollTo({top:y,behavior:matchMedia("(prefers-reduced-motion:reduce)").matches?"auto":"smooth"})}catch(e){c.scrollTop=y}}
+function drawScore(){$("score").innerHTML=P.map(function(p,i){
+ return '<div class="chip'+(i===turn?" on":"")+'">'+car(p.color,26)+'<span>'+p.name+(p.car?" · "+p.car.n:"")+'<small>'+rm(p.m)+' · ✎'+p.k+' · ☀'+p.hp+'</small><small>'+(p.sp?"♥ ":"")+(p.kids?"☺×"+p.kids+" ":"")+(p.ho.length?"⌂×"+p.ho.length+" ":"")+(p.fin?"★":"")+'</small></span></div>'}).join("")}
+function show(){drawScore();drawMap();camera()}
+
+function begin(){
+ P=[];for(var i=0;i<N_;i++)P.push({name:"Jogador "+(i+1),color:COL[i],pos:"S",pick:null,m:20,k:0,hp:0,car:null,sp:false,kids:0,ho:[],fin:false});
+ turn=0;done=0;
+ $("start").classList.add("hidden");$("end").classList.add("hidden");$("game").classList.remove("hidden");
+ setup(0)}
+function setup(i){
+ if(i>=N_){turn=0;return startTurn()}
+ turn=i;show();var p=P[i];
+ ui('<h2>'+p.name+': como começar a vida?</h2>'+FK.S.map(function(f,j){return '<button class="btn alt" id="o'+j+'">'+f[0]+'<small>'+f[1]+'</small></button>'}).join(""),{
+  o0:function(){p.m-=40;p.pick=N.S.n[0];ui('<p class="ev">'+p.name+' pegou o financiamento e vai estudar.</p><button class="btn" id="nx">Continuar</button>',{nx:function(){setup(i+1)}})},
+  o1:function(){p.car=pick(JOB);p.k=1;p.pick=N.S.n[1];ui('<p class="ev">'+p.name+' entrou direto no mercado como <b>'+p.car.n+'</b> ('+rm(p.car.s)+' por pagamento).</p><button class="btn" id="nx">Continuar</button>',{nx:function(){setup(i+1)}})}})}
+function startTurn(){
+ if(P.every(function(p){return p.fin}))return finish();
+ while(cur().fin)turn=(turn+1)%N_;
+ show();
+ ui('<h2>Vez de '+cur().name+'</h2><p class="ev">Gire a roleta e ande pelo mapa.</p><button class="btn" id="roll">Girar roleta</button>',{roll:roll})}
+function roll(){var p=cur(),d=spin(),s=d,msgs=[];
+ while(s>0){var nx=N[p.pos].n.length>1?p.pick:N[p.pos].n[0];p.pos=nx;s--;var t=N[nx].t;
+  if(t==="p"&&s>0&&p.car){var a=sal(p);p.m+=a;msgs.push("Passou por um pagamento: "+sg(a)+".")}
+  if(STOP.indexOf(t)>-1)break}
+ show();land(d,msgs)}
+function land(d,msgs){var p=cur(),t=N[p.pos].t,s;
+ var h='<div class="dice">'+d+'</div>'+(msgs.length?'<p class="mut">'+msgs.join("<br>")+'</p>':'');
+ function cont(x){show();ui(h+x+'<button class="btn" id="nx">Continuar</button>',{nx:next})}
+ if(t==="u")return cont('<p class="ev">Semana de provas e xerox. Você aprendeu algo. '+fx(p,0,1,0)+'</p>');
+ if(t==="s")return cont('<p class="ev">Fez um curso extra depois do expediente. '+fx(p,-3,2,0)+'</p>');
+ if(t==="a"){var e=pick(EVT);return cont('<p class="ev">'+e.t+' '+fx(p,e.m,e.k,e.h)+'</p>')}
+ if(t==="p"){var b=sal(p)+10;return cont('<p class="ev">Caiu no dia do pagamento: salário e bônus. '+fx(p,b,0,0)+'</p>')}
+ if(t==="v")return cont('<p class="ev">Viagem com a tropa. Cara, mas inesquecível. '+fx(p,-8,0,4)+'</p>');
+ if(t==="n"){s=spin();var m=s<=4?-15:s<=7?10:30;return cont('<p class="ev">Negócio próprio, roleta '+s+': '+(m<0?"o plano deu errado. ":m>10?"vendeu muito bem! ":"deu um lucrinho. ")+fx(p,m,1,0)+'</p>')}
+ if(t==="g"){var o=UNI.slice().sort(function(){return Math.random()-.5}).slice(0,2);fx(p,0,3,0);
+  return ui(h+'<h2>Formatura!</h2><p class="ev">+3 conhecimento. Escolha sua carreira.</p>'+o.map(function(c,i){return '<button class="btn alt" id="j'+i+'">'+c.n+'<small>'+rm(c.s)+' por pagamento</small></button>'}).join(""),{
+   j0:function(){p.car=o[0];cont('<p class="ev">'+p.name+' virou <b>'+o[0].n+'</b>.</p>')},
+   j1:function(){p.car=o[1];cont('<p class="ev">'+p.name+' virou <b>'+o[1].n+'</b>.</p>')}})}
+ if(t==="h"){var c=pick(HOUSES);
+  return ui(h+'<h2>Casa à venda</h2><p class="ev">'+c.n+' por '+rm(c.c)+'. Vale '+rm(c.v)+' no fim do jogo.</p><button class="btn" id="y">Comprar</button><button class="btn alt" id="n">Deixar passar</button>',{
+   y:function(){p.ho.push(c);cont('<p class="ev">Comprou: '+c.n+'. '+fx(p,-c.c,0,2)+'</p>')},
+   n:function(){cont('<p class="ev">Seguiu viagem sem comprar.</p>')}})}
+ if(t==="m")return ui(h+'<h2>Casamento</h2><p class="ev">Casar rende presentes e felicidade, e mais R$ 5 mil em cada pagamento.</p><button class="btn" id="y">Casar</button><button class="btn alt" id="n">Seguir solteiro</button>',{
+   y:function(){p.sp=true;cont('<p class="ev">Festa boa e muitos presentes. '+fx(p,10,0,4)+'</p>')},
+   n:function(){cont('<p class="ev">Solteiro e livre.</p>')}});
+ if(t==="b"){s=spin();var k=s<=3?0:s<=7?1:2;p.kids+=k;return cont('<p class="ev">A roleta deu '+s+': '+(k?k+(k>1?" filhos":" filho")+' a caminho. '+fx(p,0,0,3*k):'nenhum filho por enquanto.')+'</p>')}
+ if(t==="f")return ui(h+'<h2>Bifurcação</h2><p class="ev">Qual caminho seguir?</p>'+FK[p.pos].map(function(f,i){return '<button class="btn alt" id="w'+i+'">'+f[0]+'<small>'+f[1]+'</small></button>'}).join(""),{
+   w0:function(){p.pick=N[p.pos].n[0];cont('<p class="ev">Seguindo pelo caminho: <b>'+FK[p.pos][0][0]+'</b>.</p>')},
+   w1:function(){p.pick=N[p.pos].n[1];cont('<p class="ev">Seguindo pelo caminho: <b>'+FK[p.pos][1][0]+'</b>.</p>')}});
+ if(t==="r"){p.fin=true;var bonus=[40,30,20,10][done++]||10;return cont('<h2>Aposentadoria!</h2><p class="ev">'+done+'º a se aposentar: '+fx(p,bonus,0,0)+'</p>')}
+ cont('<p class="ev">Dia tranquilo.</p>')}
+function next(){turn=(turn+1)%N_;startTurn()}
+function finish(){
+ $("game").classList.add("hidden");$("end").classList.remove("hidden");
+ var s=P.slice().sort(function(a,b){return pts(b)-pts(a)});
+ $("rank").innerHTML=s.map(function(p,i){return '<li>'+(i+1)+'º '+car(p.color,30)+'<span>'+p.name+'<small>'+(p.car?p.car.n:"")+'</small></span><b>'+pts(p)+' pontos<small>patrimônio '+rm(net(p))+' · ✎'+p.k+' · ☀'+p.hp+'</small></b></li>'}).join("")}
+[].forEach.call($("pick").children,function(b){b.onclick=function(){N_=+b.dataset.n;[].forEach.call($("pick").children,function(x){x.setAttribute("aria-pressed",x===b)})}});
+$("go").onclick=begin;
+$("again").onclick=function(){$("end").classList.add("hidden");$("start").classList.remove("hidden")};
+})();
+</script>
+</body>
+</html>
